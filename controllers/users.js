@@ -1,39 +1,68 @@
 
-import {v4 as uuidv4} from 'uuid';
+import User from '../models/User.js';
 
-let users = [];
 
-export const getUsers = (req, res) => {
-    console.log(users);
+export const getUsers = async (req, res) => {
+    const users = await User.find();
     res.send(users);
 };
 
-export const createUser = (req,res) => {
-    const user = req.body;
-    const userWithId = { ...user, id: uuidv4() };
-    users.push(userWithId);
-    res.send(`User with the name ${user.name} added to the database!`);
+export const createUser = async (req, res) => {
+    const newUser = new User(req.body);
+    try {
+        const user = await newUser.save();
+        if (!user) {
+            throw Error('Something wrong!!');
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(400).json({ msg: error });
+    }
 
 };
 
-export const getUser = (req,res) => {
+export const getUser = async (req, res) => {
     const { id } = req.params;
-    const foundUser = users.find((user) => user.id == id);
-    res.send(foundUser);
+
+    try {
+        const foundUser = await User.findById(id);
+        if (!foundUser) {
+            throw Error('Usuario not found!');
+        }
+        res.status(200).json({ foundUser });
+    } catch (error) {
+        res.status(400).json({ msg: 'something wrong!' });
+    }
 };
 
-export const deleteUser = (req,res) => {
+export const deleteUser = async (req, res) => {
     const { id } = req.params;
-    users = users.filter((user) => user.id != id);
-    res.send(`User with ${id} deleted from database.`);
+
+    try {
+        await User.findByIdAndDelete(id, (err) => {
+            if (err) res.status(400).json({ msg: 'something wrong!' });
+            res.send(`User with ${id} deleted from database.`)
+        });
+    } catch (error) {
+        res.status(400).json({ msg: 'something wrong!' });
+    }
+
 };
 
-export const updateUser = (req,res) => {
-    const { id }  = req.params;
-    const { name, lastName, age } = req.body;
-    const user = users.find((user) => user.id == id);
-    if(name) user.name = name;
-    if(lastName) user.lastName = lastName;
-    if(age) user.age = age;
-    res.send(`User with the id ${id} has been updated`);
+export const updateUser = async (req, res) => {
+    const { id } = req.params;
+    const updatedUser = req.body;
+    await User.findOneAndUpdate(
+        {_id: id},{
+            name: updatedUser.name,
+        lastName: updatedUser.lastName,
+        age: updatedUser.age
+    },
+        function (err, result) {
+            if (err) {
+                res.send(err);
+            } else {
+                res.send(result);
+            }
+        });
 };
